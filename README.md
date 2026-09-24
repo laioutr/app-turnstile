@@ -1,13 +1,4 @@
-<!--
-Get your module up and running quickly.
-
-Find and replace all on all files (CMD+SHIFT+F):
-- Name: My Laioutr App
-- Package name: my-laioutr-app
-- Description: My new Laioutr App
--->
-
-# My Laioutr App
+# Laioutr App: Cloudflare Turnstile
 
 [![Laioutr][laioutr-src]][laioutr-href]
 [![npm version][npm-version-src]][npm-version-href]
@@ -15,35 +6,83 @@ Find and replace all on all files (CMD+SHIFT+F):
 [![License][license-src]][license-href]
 [![Nuxt][nuxt-src]][nuxt-href]
 
-My new [Laioutr](https://laioutr.com) App for doing amazing things using Nuxt.
-
-See [laioutr.com](https://laioutr.com) for more information about Laioutr.
+Makes [Cloudflare Turnstile](https://developers.cloudflare.com/turnstile/) the bot-protection provider
+of a [Laioutr](https://laioutr.com) storefront. Every action the project protects must carry a
+Turnstile token, and the server checks it with Cloudflare before the action runs. Most visitors never
+see Turnstile. When Cloudflare asks a visitor to confirm they are human, the app shows the widget in a
+small dialog.
 
 - [✨ &nbsp;Release Notes](/CHANGELOG.md)
-  <!-- - [🏀 Online playground](https://stackblitz.com/github/your-org/my-laioutr-app?file=playground%2Fapp.vue) -->
-  <!-- - [📖 &nbsp;Documentation](https://example.com) -->
 
-## Features
+> [!WARNING]
+> **A visitor whose browser cannot reach Cloudflare cannot run a protected action**, even with
+> `whenUnavailable: "open"`. This includes a blocked or failed load of Turnstile's script and a browser
+> Turnstile does not support. `open` covers only an outage that the server sees. A browser cannot prove
+> an outage, because every bot could make the same claim.
 
-<!-- Highlight some of the features your module provide here -->
+## Setup
 
-- ⛰ &nbsp;Foo
-- 🚠 &nbsp;Bar
-- 🌲 &nbsp;Baz
+1. **Create a widget in your own Cloudflare account**: Turnstile → Add widget, mode **Managed**. Add
+   every hostname the storefront answers on, including preview hostnames. On the Free plan a widget
+   takes up to 10 hostnames, and an account up to 20 widgets. Verifications have no limit.
+2. **Install the app** and configure it with the widget's two keys. List the actions to protect in the
+   project's bot-protection configuration:
 
-## Quick Setup
+   ```json
+   {
+     "apps": [
+       { "name": "@laioutr/app-turnstile", "config": { "siteKey": "0x…", "secretKey": "0x…" } }
+     ],
+     "config": { "botProtection": { "actions": ["<action token>"] } }
+   }
+   ```
 
-Requires Node.js 22.12 or newer and pnpm 10 or newer. The committed `.npmrc` maps the Laioutr scopes to [npm.laioutr.cloud](https://npm.laioutr.cloud).
+   The site key reaches the browser. The secret stays on the server. If either key is missing, the
+   app logs a warning at build time and registers nothing, so every protected action is rejected.
 
-1. `npm login --registry https://npm.laioutr.cloud` — once per machine; the token goes to your user `~/.npmrc`. See the [Laioutr NPM Guide](https://docs.laioutr.com/cockpit/project-settings/npm).
+## What loads, and when
+
+Nothing loads before the first protected action. On that action, the browser loads
+`https://challenges.cloudflare.com/turnstile/v0/api.js` and Cloudflare runs its challenge. Whether that
+needs the visitor's consent is for the storefront operator to decide.
+
+## The dialog
+
+The dialog is a native `<dialog data-laioutr-turnstile>` with `data-state="open" | "closed"`. Its
+default styles use `:where(…)`, so any rule in the storefront's stylesheet overrides them without
+`!important`. Escape and the close control both cancel the action, and the action then sends no
+request.
+
+## Testing with Cloudflare's test keys
+
+Cloudflare's test keys work on any hostname, including `localhost`:
+
+| Site key | Behaviour |
+| --- | --- |
+| `1x00000000000000000000BB` | Always passes, invisible |
+| `2x00000000000000000000BB` | Always fails, invisible |
+| `3x00000000000000000000FF` | Forces an interactive challenge |
+
+| Secret | Behaviour |
+| --- | --- |
+| `1x0000000000000000000000000000000AA` | Always passes |
+| `2x0000000000000000000000000000000AA` | Always fails |
+| `3x0000000000000000000000000000000AA` | Returns "token already spent" |
+
+A test secret accepts every token, so the server logs a warning at startup when one is configured.
+**Never ship a test secret.**
+
+## Development
+
+Requires Node.js 22.12 or newer and pnpm 10 or newer. The committed `.npmrc` maps the Laioutr scopes
+to [npm.laioutr.cloud](https://npm.laioutr.cloud).
+
+1. `npm login --registry https://npm.laioutr.cloud` — once per machine. See the
+   [Laioutr NPM Guide](https://docs.laioutr.com/cockpit/project-settings/npm).
 2. `pnpm install`
-3. `pnpm rc:fetch -p <organization slug>/<project slug> -s <project secret key>` — writes `laioutrrc.json` with your project's configuration. Until then, the playground runs on placeholder content from `playground/fixtures/laioutrrc.json`.
-   The playground installs every app listed in its `apps`, so add the ones your project uses besides `@laioutr-app/ui`: `pnpm add -D <package>`.
-4. `pnpm dev` — starts the playground on http://localhost:3000.
-
-That's it! You can now use My Laioutr App in your [Laioutr Frontend](https://laioutr.com) ✨
-
-You can find a thorough guide on getting started with Laioutr development in our [developer guide](https://docs.laioutr.com/getting-started/next-steps/local-setup).
+3. `pnpm dev` — starts the playground on http://localhost:3000. Its page runs one protected action
+   against Cloudflare. Choose the keys with `TURNSTILE_SITE_KEY` and `TURNSTILE_SECRET_KEY`. Without
+   them the playground uses the always-passing test keys.
 
 ## Linting and Formatting
 
@@ -100,12 +139,12 @@ Follow the [setup guide](https://docs.laioutr.com/getting-started/next-steps/loc
 
 <!-- Badges -->
 
-[npm-version-src]: https://img.shields.io/npm/v/my-laioutr-app/latest.svg?style=flat&colorA=020420&colorB=00DC82
-[npm-version-href]: https://npmjs.com/package/my-laioutr-app
-[npm-downloads-src]: https://img.shields.io/npm/dm/my-laioutr-app.svg?style=flat&colorA=020420&colorB=00DC82
-[npm-downloads-href]: https://npm.chart.dev/my-laioutr-app
-[license-src]: https://img.shields.io/npm/l/my-laioutr-app.svg?style=flat&colorA=020420&colorB=00DC82
-[license-href]: https://npmjs.com/package/my-laioutr-app
+[npm-version-src]: https://img.shields.io/npm/v/@laioutr/app-turnstile/latest.svg?style=flat&colorA=020420&colorB=00DC82
+[npm-version-href]: https://npmjs.com/package/@laioutr/app-turnstile
+[npm-downloads-src]: https://img.shields.io/npm/dm/@laioutr/app-turnstile.svg?style=flat&colorA=020420&colorB=00DC82
+[npm-downloads-href]: https://npm.chart.dev/@laioutr/app-turnstile
+[license-src]: https://img.shields.io/npm/l/@laioutr/app-turnstile.svg?style=flat&colorA=020420&colorB=00DC82
+[license-href]: https://npmjs.com/package/@laioutr/app-turnstile
 [nuxt-src]: https://img.shields.io/badge/Nuxt-020420?logo=nuxt.js
 [nuxt-href]: https://nuxt.com
 [laioutr-src]: https://img.shields.io/badge/%F0%9F%A6%99_Laioutr_App-702DCE

@@ -21,20 +21,24 @@ pnpm vitest run src/path/to/file.test.ts   # a single suite
 
 ## Architecture
 
-`src/module.ts` is the Nuxt module entry: it registers runtime config, server routes, public assets
-and page types, and hands the Orchestr directory to `registerLaioutrApp`.
+The app makes Cloudflare Turnstile the bot-protection provider of a Laioutr storefront. frontend-core
+owns the contract, the project config (`config.botProtection` in the laioutrrc), the outage policy and
+the errors. This app fills in the two provider halves:
 
-**Orchestr handler types**, by filename suffix under `src/runtime/server/orchestr/<entity>/`:
+- `src/module.ts` reads `siteKey` and `secretKey` from the app config, puts the site key in public and
+  the secret in private runtime config, names the provider, and registers the plugins. A missing key
+  logs a warning and registers nothing, which makes frontend-core reject every protected action.
+- `src/runtime/shared/turnstileAction.ts` maps a protected-action id to a valid Turnstile `action`. The
+  client and the server both call it, so it must stay synchronous and deterministic.
+- `src/runtime/app/` loads `api.js` on the first protected action, never before. Each action renders
+  one `interaction-only` widget into a shared `<dialog>` and removes it after the token, so actions
+  queue. The dialog opens only between Turnstile's interactive callbacks.
+- `src/runtime/server/` verifies the `x-turnstile-token` header with `siteverify` and compares the
+  hostname and the action. Only a network error, a timeout or a 5xx is `unavailable`. A result that
+  Cloudflare flags as a test key skips the comparison, and a configured test secret logs a warning.
 
-- `*.query.ts` — fetch and return entity IDs
-- `*.link.ts` — relationships between entities
-- `*.resolver.ts` — resolve data components for an entity
-- `*.action.ts` — mutations and side effects
-- `*.page-index.ts` — enumerate a page type's entities and resolve a URL back to one
-- `*.template.ts` — preset, labelled query inputs an editor picks from in Studio
-
-Canonical entity types come from `@laioutr-core/canonical-types`. Apps consume them and do not define
-them — a shape that feels wrong belongs upstream, not patched locally.
+Unit tests fake Cloudflare. Only the playground page, run against Cloudflare's test keys, proves the
+Cloudflare side. The README lists the keys.
 
 ## Rules
 

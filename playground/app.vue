@@ -1,3 +1,3 @@
 <template>
-  <LfcApp />
+  <NuxtPage />
 </template>
