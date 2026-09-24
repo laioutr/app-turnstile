@@ -74,8 +74,9 @@ const create = (): TurnstileDialog => {
 
   const listeners = new Set<() => void>();
   const hide = () => {
-    if (element.open) element.close();
+    // State first: the `close` listener below must see a close we started, whether it fires now or later.
     element.setAttribute('data-state', 'closed');
+    if (element.open) element.close();
   };
   const cancel = () => {
     hide();
@@ -83,6 +84,10 @@ const create = (): TurnstileDialog => {
   };
 
   close.addEventListener('click', cancel);
+  // Chrome closes a modal dialog on a repeated Escape, and Android on the back gesture, without `cancel`.
+  element.addEventListener('close', () => {
+    if (element.getAttribute('data-state') === 'open') cancel();
+  });
   // Escape fires `cancel` and closes the dialog without our button.
   element.addEventListener('cancel', (event) => {
     event.preventDefault();

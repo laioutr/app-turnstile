@@ -44,6 +44,25 @@ describe('turnstileDialog', () => {
     expect(listener).toHaveBeenCalledTimes(2);
   });
 
+  it('reports a cancel when the browser closes the dialog without a cancel event', async () => {
+    const { turnstileDialog } = await import('./turnstileDialog');
+    const dialog = turnstileDialog();
+    const listener = vi.fn();
+    dialog.onCancel(listener);
+    dialog.open();
+
+    // Chrome closes a modal dialog on a repeated Escape, and Android on the back gesture, without `cancel`.
+    document.querySelector<HTMLDialogElement>('dialog[data-laioutr-turnstile]')!.close();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(listener).toHaveBeenCalledTimes(1);
+    expect(document.querySelector('dialog[data-laioutr-turnstile]')!.getAttribute('data-state')).toBe('closed');
+
+    dialog.open();
+    dialog.close();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(listener).toHaveBeenCalledTimes(1);
+  });
+
   it('adds its default styles once, at zero specificity, so a storefront rule always wins', async () => {
     const { turnstileDialog } = await import('./turnstileDialog');
     turnstileDialog();

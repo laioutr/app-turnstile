@@ -15,18 +15,30 @@ const solve = async (siteKey: string, request: BotProtectionRequest): Promise<st
     // `let`, not `const`: `finish` reads it, and a callback may run before `render` returns.
     // eslint-disable-next-line prefer-const
     let widgetId: string | undefined;
-    let timer: ReturnType<typeof setTimeout> | undefined = setTimeout(
-      () => finish(() => reject(new Error('[@laioutr/app-turnstile] Turnstile returned no token in time.'))),
-      TOKEN_TIMEOUT_MS
-    );
+    let settled = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const startDeadline = () => {
+      timer = setTimeout(
+        () => finish(() => reject(new Error('[@laioutr/app-turnstile] Turnstile returned no token in time.'))),
+        TOKEN_TIMEOUT_MS
+      );
+    };
+    startDeadline();
     const stopCancel = dialog.onCancel(() => finish(() => reject(new BotProtectionCancelled())));
 
+    // Settles first: every later protected action waits on this one, so cleanup must never keep it pending.
     function finish(settle: () => void) {
+      if (settled) return;
+      settled = true;
+      settle();
       clearTimeout(timer);
       stopCancel();
       dialog.close();
-      if (widgetId !== undefined) turnstile.remove(widgetId);
-      settle();
+      try {
+        if (widgetId !== undefined) turnstile.remove(widgetId);
+      } catch {
+        // The widget is gone either way; the token or error is already delivered.
+      }
     }
 
     widgetId = turnstile.render(dialog.container, {
@@ -45,7 +57,11 @@ const solve = async (siteKey: string, request: BotProtectionRequest): Promise<st
         timer = undefined;
         dialog.open();
       },
-      'after-interactive-callback': () => dialog.close(),
+      'after-interactive-callback': () => {
+        dialog.close();
+        // Verification continues after the click, and Cloudflare may never answer.
+        startDeadline();
+      },
     });
   });
 };

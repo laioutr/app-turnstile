@@ -20,7 +20,7 @@ beforeEach(async () => {
   vi.resetModules();
   renders.length = 0;
   vi.mocked(fake.render).mockClear();
-  vi.mocked(fake.remove).mockClear();
+  vi.mocked(fake.remove).mockReset();
   document.body.innerHTML = '';
   const { loadTurnstile } = await import('./loadTurnstile');
   vi.mocked(loadTurnstile).mockResolvedValue(fake);
@@ -123,6 +123,33 @@ describe('createTurnstileAdapter', () => {
     await vi.advanceTimersByTimeAsync(TOKEN_TIMEOUT_MS * 2);
     renders[0]!.callback('late-token');
     await expect(pending).resolves.toEqual({ 'x-turnstile-token': 'late-token' });
+  });
+
+  it('fails the action when no token arrives in time after the interaction', async () => {
+    vi.useFakeTimers();
+    const { TOKEN_TIMEOUT_MS } = await import('./createTurnstileAdapter');
+    const pending = (await adapter()).prepare({ action: 'a' });
+    await vi.advanceTimersByTimeAsync(0);
+    renders[0]!['before-interactive-callback']();
+    renders[0]!['after-interactive-callback']();
+    const assertion = expect(pending).rejects.toThrow(/no token/i);
+    await vi.advanceTimersByTimeAsync(TOKEN_TIMEOUT_MS);
+    await assertion;
+  });
+
+  it('settles the action and frees the queue when removing the widget throws', async () => {
+    vi.mocked(fake.remove).mockImplementation(() => {
+      throw new Error('already removed');
+    });
+    const turnstile = await adapter();
+    const first = turnstile.prepare({ action: 'a' });
+    const second = turnstile.prepare({ action: 'b' });
+    await settle();
+    renders[0]!.callback('token-a');
+    await expect(first).resolves.toEqual({ 'x-turnstile-token': 'token-a' });
+    await settle();
+    renders[1]!.callback('token-b');
+    await expect(second).resolves.toEqual({ 'x-turnstile-token': 'token-b' });
   });
 
   it('lets the next action run after one fails', async () => {
