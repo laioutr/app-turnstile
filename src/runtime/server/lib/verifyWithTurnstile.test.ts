@@ -47,7 +47,8 @@ describe('verifyWithTurnstile', () => {
   });
 
   it('rejects on a wrong secret instead of reporting an outage', async () => {
-    answer({ success: false, 'error-codes': ['invalid-input-secret'] });
+    // Cloudflare sends this one with HTTP 400.
+    answer({ success: false, 'error-codes': ['invalid-input-secret'] }, 400);
     await expect(verifyWithTurnstile(check())).resolves.toEqual({ status: 'invalid', reason: 'invalid-input-secret' });
   });
 

@@ -46,7 +46,14 @@ const siteverify = async (check: TurnstileCheck & { token: string }): Promise<Bo
   }
 
   if (response.status >= 500) return { status: 'unavailable', reason: `http-${response.status}` };
-  if (!response.ok) return { status: 'invalid', reason: `http-${response.status}` };
+  if (!response.ok) {
+    // A wrong secret comes back as 400 with its error code in the body, and the code names the fault.
+    const codes = await response.json().then(
+      (body: SiteverifyResult) => body['error-codes'],
+      () => undefined
+    );
+    return { status: 'invalid', reason: codes?.[0] ?? `http-${response.status}` };
+  }
 
   try {
     return judge((await response.json()) as SiteverifyResult, check);
