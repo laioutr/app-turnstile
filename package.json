@@ -1,9 +1,16 @@
 {
-  "name": "my-laioutr-app",
-  "version": "1.0.0",
-  "description": "My new Laioutr App",
-  "repository": "your-org/my-laioutr-app",
+  "name": "@laioutr/app-turnstile",
+  "version": "0.0.0",
+  "description": "Cloudflare Turnstile as the bot-protection provider for Laioutr actions",
+  "repository": "laioutr/app-turnstile",
   "license": "MIT",
+  "keywords": [
+    "laioutr",
+    "laioutr-app",
+    "cloudflare",
+    "turnstile",
+    "bot-protection"
+  ],
   "type": "module",
   "packageManager": "pnpm@10.15.0",
   "exports": {
@@ -42,13 +49,12 @@
   ],
   "dependencies": {
     "@nuxt/kit": "3.16.2",
-    "zod": "3.25.61"
+    "@opentelemetry/api": "^1.9.0",
+    "defu": "6.1.4",
+    "h3": "^1.15.0"
   },
   "devDependencies": {
     "@changesets/cli": "^2.31.0",
-    "@laioutr-app/ui": "^2.25.2",
-    "@laioutr-core/canonical-types": "^0.34.2",
-    "@laioutr-core/core-types": "^0.57.1",
     "@laioutr-core/devtools": "^0.57.1",
     "@laioutr-core/frontend-core": "^0.57.1",
     "@laioutr/cli": "^0.4.1",
@@ -63,6 +69,7 @@
     "@types/node": "latest",
     "@vueuse/core": "13.1.0",
     "eslint": "^9.35.0",
+    "happy-dom": "^20.14.5",
     "nuxt": "3.16.2",
     "pinia": "3.0.2",
     "typescript": "5.9.2",
@@ -70,12 +77,14 @@
     "vue-tsc": "2.2.10"
   },
   "peerDependencies": {
-    "@laioutr-core/canonical-types": ">=0.26.2",
-    "@laioutr-core/core-types": ">=0.37.1",
-    "@laioutr-core/frontend-core": ">=0.37.1"
+    "@laioutr-core/frontend-core": ">=0.55.0"
   },
   "engines": {
     "node": ">=22.12.0",
     "pnpm": ">=10.15.0"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
   }
 }
