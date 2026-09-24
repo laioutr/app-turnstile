@@ -13,7 +13,7 @@ const solve = async (siteKey: string, request: BotProtectionRequest): Promise<st
 
   return new Promise<string>((resolve, reject) => {
     // `let`, not `const`: `finish` reads it, and a callback may run before `render` returns.
-    // eslint-disable-next-line prefer-const
+     
     let widgetId: string | undefined;
     let settled = false;
     let timer: ReturnType<typeof setTimeout> | undefined;
@@ -41,28 +41,32 @@ const solve = async (siteKey: string, request: BotProtectionRequest): Promise<st
       }
     }
 
-    widgetId = turnstile.render(dialog.container, {
-      sitekey: siteKey,
-      action: turnstileAction(request.action),
-      appearance: 'interaction-only',
-      // Our own error handling decides; Turnstile's automatic retry would keep the action waiting.
-      retry: 'never',
-      callback: (token) => finish(() => resolve(token)),
-      'error-callback': (code) => finish(() => reject(new Error(`[@laioutr/app-turnstile] Turnstile failed with error ${code}.`))),
-      'unsupported-callback': () => finish(() => reject(new Error('[@laioutr/app-turnstile] This browser is not supported by Turnstile.'))),
-      'timeout-callback': () => finish(() => reject(new BotProtectionCancelled())),
-      'before-interactive-callback': () => {
-        // A visitor solving a challenge is not a stalled widget.
-        clearTimeout(timer);
-        timer = undefined;
-        dialog.open();
-      },
-      'after-interactive-callback': () => {
-        dialog.close();
-        // Verification continues after the click, and Cloudflare may never answer.
-        startDeadline();
-      },
-    });
+    try {
+      widgetId = turnstile.render(dialog.container, {
+        sitekey: siteKey,
+        action: turnstileAction(request.action),
+        appearance: 'interaction-only',
+        // Our own error handling decides; Turnstile's automatic retry would keep the action waiting.
+        retry: 'never',
+        callback: (token) => finish(() => resolve(token)),
+        'error-callback': (code) => finish(() => reject(new Error(`[@laioutr/app-turnstile] Turnstile failed with error ${code}.`))),
+        'unsupported-callback': () => finish(() => reject(new Error('[@laioutr/app-turnstile] This browser is not supported by Turnstile.'))),
+        'timeout-callback': () => finish(() => reject(new BotProtectionCancelled())),
+        'before-interactive-callback': () => {
+          // A visitor solving a challenge is not a stalled widget.
+          clearTimeout(timer);
+          timer = undefined;
+          dialog.open();
+        },
+        'after-interactive-callback': () => {
+          dialog.close();
+          // Verification continues after the click, and Cloudflare may never answer.
+          startDeadline();
+        },
+      });
+    } catch (error) {
+      finish(() => reject(error));
+    }
   });
 };
 

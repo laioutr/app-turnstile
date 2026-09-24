@@ -78,6 +78,7 @@ describe('turnstileDialog', () => {
     document.documentElement.lang = 'de-DE';
     const { turnstileDialog } = await import('./turnstileDialog');
     turnstileDialog();
+    expect(document.querySelector('dialog[data-laioutr-turnstile]')!.getAttribute('aria-label')).toBe('Sicherheitsprüfung');
     expect(document.querySelector('dialog[data-laioutr-turnstile] button')!.getAttribute('aria-label')).toBe('Schließen');
   });
 });
