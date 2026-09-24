@@ -2,6 +2,7 @@ const MAX_LENGTH = 32;
 const HASH_LENGTH = 8;
 
 // FNV-1a, because the client and the server must agree synchronously and Web Crypto's digest is async.
+/* eslint-disable no-bitwise -- a hash is bit arithmetic */
 const fnv1a = (input: string): string => {
   let hash = 0x811c9dc5;
   for (let index = 0; index < input.length; index++) {
@@ -10,6 +11,7 @@ const fnv1a = (input: string): string => {
   }
   return (hash >>> 0).toString(16).padStart(HASH_LENGTH, '0');
 };
+/* eslint-enable no-bitwise */
 
 /** Turnstile accepts at most 32 characters from `[A-Za-z0-9_-]` as an action. */
 export const turnstileAction = (id: string): string => {
