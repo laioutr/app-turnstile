@@ -152,6 +152,23 @@ describe('createTurnstileAdapter', () => {
     await expect(second).resolves.toEqual({ 'x-turnstile-token': 'token-b' });
   });
 
+  it('fails the action and leaves no deadline or listener behind when rendering throws', async () => {
+    vi.useFakeTimers();
+    vi.mocked(fake.render).mockImplementationOnce(() => {
+      throw new Error('invalid sitekey');
+    });
+    const turnstile = await adapter();
+    await expect(turnstile.prepare({ action: 'a' })).rejects.toThrow(/invalid sitekey/);
+    expect(vi.getTimerCount()).toBe(0);
+
+    // A leftover cancel listener would close the dialog under the next action.
+    const next = turnstile.prepare({ action: 'b' });
+    await vi.advanceTimersByTimeAsync(0);
+    renders[0]!['before-interactive-callback']();
+    renders[0]!.callback('token-b');
+    await expect(next).resolves.toEqual({ 'x-turnstile-token': 'token-b' });
+  });
+
   it('lets the next action run after one fails', async () => {
     const turnstile = await adapter();
     const failed = turnstile.prepare({ action: 'a' });

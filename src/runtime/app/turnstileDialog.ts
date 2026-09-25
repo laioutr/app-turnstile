@@ -50,6 +50,16 @@ const DEFAULT_STYLES = `
 }
 `;
 
+const DIALOG_LABELS: Record<string, string> = {
+  de: 'Sicherheitsprüfung',
+  en: 'Security check',
+  es: 'Comprobación de seguridad',
+  fr: 'Vérification de sécurité',
+  it: 'Controllo di sicurezza',
+  nl: 'Beveiligingscontrole',
+  pl: 'Weryfikacja bezpieczeństwa',
+};
+
 let dialog: TurnstileDialog | undefined;
 
 const create = (): TurnstileDialog => {
@@ -62,11 +72,13 @@ const create = (): TurnstileDialog => {
   const element = document.createElement('dialog');
   element.setAttribute('data-laioutr-turnstile', '');
   element.setAttribute('data-state', 'closed');
+  const language = document.documentElement.lang.slice(0, 2);
+  element.setAttribute('aria-label', DIALOG_LABELS[language] ?? DIALOG_LABELS.en!);
 
   const close = document.createElement('button');
   close.type = 'button';
   close.textContent = '×';
-  close.setAttribute('aria-label', CLOSE_LABELS[document.documentElement.lang.slice(0, 2)] ?? CLOSE_LABELS.en!);
+  close.setAttribute('aria-label', CLOSE_LABELS[language] ?? CLOSE_LABELS.en!);
 
   const container = document.createElement('div');
   element.append(close, container);

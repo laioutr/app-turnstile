@@ -53,6 +53,22 @@ default styles use `:where(…)`, so any rule in the storefront's stylesheet ove
 `!important`. Escape and the close control both cancel the action, and the action then sends no
 request.
 
+## Content Security Policy
+
+With a Content Security Policy, allow Cloudflare in two directives, or the browser blocks Turnstile and
+every protected action fails:
+
+```
+script-src https://challenges.cloudflare.com;
+frame-src https://challenges.cloudflare.com;
+```
+
+A nonce-based policy needs `'strict-dynamic'`. The app inserts Turnstile's script from its own code and
+does not set a nonce on it, so the script loads only when your trusted scripts may load further ones.
+
+The dialog's default styles are an inline `<style>`. A policy without `style-src 'unsafe-inline'` blocks
+them. The dialog still works, but unstyled, so style it in your own stylesheet.
+
 ## Testing with Cloudflare's test keys
 
 Cloudflare's test keys work on any hostname, including `localhost`:
